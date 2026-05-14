@@ -1,4 +1,11 @@
 const nodemailer = require("nodemailer");
+const mongoose = require("mongoose");
+const TrialBooking = require("../models/TrialBooking");
+const { whatsappLink } = require("../utils/whatsappLink");
+const {
+  trialAcknowledgmentHtml,
+  trialAcknowledgmentSubject,
+} = require("../utils/trialAcknowledgmentEmail");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -140,10 +147,6 @@ const TIME_LABEL = {
   evening: "Evening 🌙", weekend: "Weekend 🗓️", flexible: "Flexible 🔄",
 };
 
-function whatsappLink(raw) {
-  return `https://wa.me/${raw.replace(/\D/g, "")}`;
-}
-
 function row(icon, label, value) {
   return `
     <tr>
@@ -190,7 +193,7 @@ async function bookTrial(req, res) {
   const coursesList = resolveCourses(courses);
   const day         = DAY_LABEL[selectedDay]   ?? selectedDay;
   const time        = TIME_LABEL[selectedTime] ?? selectedTime;
-  const waLink      = whatsappLink(whatsapp);
+  const waLink      = whatsappLink(whatsapp) || "#";
   const now         = new Date().toLocaleString("en-GB", {
     timeZone: "Africa/Cairo", dateStyle: "full", timeStyle: "short",
   });
@@ -278,6 +281,9 @@ async function bookTrial(req, res) {
 </body>
 </html>`;
 
+  const ackHtml = trialAcknowledgmentHtml(`${firstName} ${lastName}`.trim());
+  const ackSubject = trialAcknowledgmentSubject();
+
   try {
     await transporter.sendMail({
       from: `"Nibras Network" <${process.env.EMAIL_USER}>`,
@@ -285,6 +291,41 @@ async function bookTrial(req, res) {
       subject: `📚 Trial Booking — ${firstName} ${lastName}`,
       html,
     });
+
+    try {
+      await transporter.sendMail({
+        from: `"Nibras Network" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: ackSubject,
+        html: ackHtml,
+      });
+    } catch (ackErr) {
+      console.error("bookTrial acknowledgment email error:", ackErr);
+    }
+
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await TrialBooking.create({
+          firstName,
+          lastName,
+          email,
+          whatsapp,
+          countryCode,
+          timezone,
+          courses: Array.isArray(courses) ? courses : [courses],
+          selectedPkg,
+          selectedDay,
+          selectedTime,
+          studentAge,
+          studentGender,
+          teacherGender,
+          message,
+        });
+      }
+    } catch (dbErr) {
+      console.error("bookTrial MongoDB save error:", dbErr);
+    }
+
     res.status(200).json({ success: true, message: "Trial booking sent successfully." });
   } catch (err) {
     console.error("bookTrial mailer error:", err);
