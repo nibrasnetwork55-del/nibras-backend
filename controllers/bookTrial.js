@@ -168,6 +168,65 @@ function sectionHeader(label) {
     </tr>`;
 }
 
+/* ─── Family members HTML block ──────────────────────────────────── */
+function familyMembersHtml(members) {
+  if (!members?.length) return "";
+
+  const memberRows = members.map((m, i) => {
+    const courseLabels = Array.isArray(m.courseLabels) && m.courseLabels.length
+      ? m.courseLabels
+      : resolveCourses(m.courses || []).split(" · ").filter(Boolean);
+
+    const tzDisplay = m.timezoneDisplay || m.timezone || "—";
+
+    const coursePills = courseLabels.length
+      ? courseLabels.map(c =>
+          `<span style="display:inline-block;background:#e8f5ec;color:#1C3A2E;border:1px solid #b8ddc4;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;margin:2px 2px 0 0;">${c}</span>`
+        ).join("")
+      : `<span style="color:#aaa;font-size:12px;">—</span>`;
+
+    return `
+      <tr>
+        <td colspan="2" style="padding:14px 16px;border-bottom:1px solid #e3ede6;background:${i % 2 === 0 ? "#f9fbf9" : "#ffffff"};">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                  <div style="width:28px;height:28px;border-radius:50%;background:#1C3A2E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;text-align:center;line-height:28px;">
+                    ${i + 1}
+                  </div>
+                  <span style="font-size:15px;font-weight:700;color:#0e2a1e;">${m.name || "—"}</span>
+                </div>
+                <table cellpadding="0" cellspacing="0" style="width:100%;font-size:12px;">
+                  <tr>
+                    <td style="padding:3px 0;width:90px;color:#7a9485;font-weight:600;">📧 Email</td>
+                    <td style="padding:3px 0;">
+                      <a href="mailto:${m.email}" style="color:#1C7A45;text-decoration:none;font-weight:600;">${m.email || "—"}</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:3px 0;color:#7a9485;font-weight:600;">🕐 Timezone</td>
+                    <td style="padding:3px 0;color:#1a2f45;">${tzDisplay}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:5px 0 3px;color:#7a9485;font-weight:600;vertical-align:top;">📖 Courses</td>
+                    <td style="padding:5px 0 3px;">
+                      <div style="display:flex;flex-wrap:wrap;">${coursePills}</div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`;
+  }).join("");
+
+  return `
+    ${sectionHeader(`Family Members (${members.length})`)}
+    ${memberRows}`;
+}
+
 /* ─── Controller ─────────────────────────────────────────────────── */
 async function bookTrial(req, res) {
   const {
@@ -177,12 +236,18 @@ async function bookTrial(req, res) {
     selectedDay, selectedTime,
     studentAge, studentGender, teacherGender,
     message,
+    familyMembers,  // ← NEW
   } = req.body;
 
+  const isFamilyPkg = typeof selectedPkg === "string" && selectedPkg.startsWith("f:");
+
+  // ── Validation ────────────────────────────────────────────────────
   if (
     !firstName || !lastName || !email || !whatsapp ||
-    !countryCode || !timezone ||
-    !courses?.length ||
+    !countryCode ||
+    (!isFamilyPkg && !timezone) ||
+    (!isFamilyPkg && !courses?.length) ||
+    (isFamilyPkg && (!Array.isArray(familyMembers) || familyMembers.length === 0)) ||
     !selectedDay || !selectedTime ||
     !studentAge || !studentGender || !teacherGender ||
     !message
@@ -190,7 +255,7 @@ async function bookTrial(req, res) {
     return res.status(400).json({ error: "Missing required fields." });
   }
 
-  const coursesList = resolveCourses(courses);
+  const coursesList = isFamilyPkg ? "" : resolveCourses(courses);
   const day         = DAY_LABEL[selectedDay]   ?? selectedDay;
   const time        = TIME_LABEL[selectedTime] ?? selectedTime;
   const waLink      = whatsappLink(whatsapp) || "#";
@@ -198,6 +263,7 @@ async function bookTrial(req, res) {
     timeZone: "Africa/Cairo", dateStyle: "full", timeStyle: "short",
   });
 
+  // ── Email HTML ────────────────────────────────────────────────────
   const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -210,8 +276,10 @@ async function bookTrial(req, res) {
         <!-- Header -->
         <tr>
           <td colspan="2" style="background:linear-gradient(135deg,#1C3A2E 0%,#245038 100%);padding:32px 28px;text-align:center;">
-            <div style="font-size:36px;margin-bottom:8px;">📚</div>
-            <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">New Trial Booking</h1>
+            <div style="font-size:36px;margin-bottom:8px;">${isFamilyPkg ? "👨‍👩‍👧‍👦" : "📚"}</div>
+            <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">
+              ${isFamilyPkg ? "New Family Plan Booking" : "New Trial Booking"}
+            </h1>
             <p style="margin:6px 0 0;color:#a8d5b5;font-size:13px;">${now} · Cairo Time</p>
           </td>
         </tr>
@@ -235,15 +303,24 @@ async function bookTrial(req, res) {
               ${row("📧", "Email",    `<a href="mailto:${email}" style="color:#1C7A45;text-decoration:none;font-weight:600;">${email}</a>`)}
               ${row("💬", "WhatsApp", `<a href="${waLink}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:6px 16px;border-radius:50px;">💬 ${whatsapp} → Open Chat</a>`)}
               ${row("🌍", "Country",  countryCode)}
-              ${row("🕐", "Timezone", timezone)}
+              ${isFamilyPkg
+                ? row("🕐", "Timezone", "<em style='color:#7a9485;'>Per member below</em>")
+                : row("🕐", "Timezone", timezone)
+              }
 
-              ${sectionHeader("Courses & Package")}
-              ${row("📖", "Courses",
-                `<div style="display:flex;flex-wrap:wrap;gap:6px;">
-                  ${coursesList.split(" · ").map(c =>
-                    `<span style="background:#e8f5ec;color:#1C3A2E;border:1px solid #b8ddc4;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${c}</span>`
-                  ).join("")}
-                </div>`)}
+              ${isFamilyPkg
+                ? familyMembersHtml(familyMembers)
+                : `
+                  ${sectionHeader("Courses & Package")}
+                  ${row("📖", "Courses",
+                    `<div style="display:flex;flex-wrap:wrap;gap:6px;">
+                      ${coursesList.split(" · ").map(c =>
+                        `<span style="background:#e8f5ec;color:#1C3A2E;border:1px solid #b8ddc4;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${c}</span>`
+                      ).join("")}
+                    </div>`
+                  )}
+                `
+              }
               ${row("📦", "Package", packageHtml(selectedPkg))}
 
               ${sectionHeader("Schedule")}
@@ -281,28 +358,30 @@ async function bookTrial(req, res) {
 </body>
 </html>`;
 
-  const ackHtml = trialAcknowledgmentHtml(`${firstName} ${lastName}`.trim());
+  const ackHtml    = trialAcknowledgmentHtml(`${firstName} ${lastName}`.trim());
   const ackSubject = trialAcknowledgmentSubject();
 
   try {
     await transporter.sendMail({
-      from: `"Nibras Network" <${process.env.EMAIL_USER}>`,
-      to:   process.env.RECEIVER_EMAIL,
+      from:    `"Nibras Network" <${process.env.EMAIL_USER}>`,
+      to:      process.env.RECEIVER_EMAIL,
       subject: `📚 Trial Booking — ${firstName} ${lastName}`,
       html,
     });
 
+    // Acknowledgment to the person who booked
     try {
       await transporter.sendMail({
-        from: `"Nibras Network" <${process.env.EMAIL_USER}>`,
-        to: email,
+        from:    `"Nibras Network" <${process.env.EMAIL_USER}>`,
+        to:      email,
         subject: ackSubject,
-        html: ackHtml,
+        html:    ackHtml,
       });
     } catch (ackErr) {
       console.error("bookTrial acknowledgment email error:", ackErr);
     }
 
+    // MongoDB save
     try {
       if (mongoose.connection.readyState === 1) {
         await TrialBooking.create({
@@ -311,8 +390,9 @@ async function bookTrial(req, res) {
           email,
           whatsapp,
           countryCode,
-          timezone,
-          courses: Array.isArray(courses) ? courses : [courses],
+          timezone:      isFamilyPkg ? null : timezone,
+          courses:       isFamilyPkg ? [] : (Array.isArray(courses) ? courses : [courses]),
+          familyMembers: isFamilyPkg ? familyMembers : [],   // ← NEW
           selectedPkg,
           selectedDay,
           selectedTime,
