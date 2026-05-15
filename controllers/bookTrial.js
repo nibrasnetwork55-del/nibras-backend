@@ -83,36 +83,18 @@ function resolvePackage(id) {
   if (kind === "p") {
     const pkg = PRIVATE_PKGS[Number(parts[1])];
     if (!pkg) return id;
-    return {
-      type:    "Private (1-on-1)",
-      name:    pkg.name,
-      hours:   `${pkg.hours} h/mo`,
-      price:   pkg.launch,
-      regular: pkg.regular,
-    };
+    return { type: "Private (1-on-1)", name: pkg.name, hours: `${pkg.hours} h/mo`, price: pkg.launch, regular: pkg.regular };
   }
   if (kind === "g") {
     const pkg = GROUP_PKGS[Number(parts[1])];
     if (!pkg) return id;
-    return {
-      type:    "Group Classes",
-      name:    pkg.name,
-      hours:   `${pkg.hours} h/mo`,
-      price:   pkg.launch,
-      regular: pkg.regular,
-    };
+    return { type: "Group Classes", name: pkg.name, hours: `${pkg.hours} h/mo`, price: pkg.launch, regular: pkg.regular };
   }
   if (kind === "f") {
     const row  = FAM_ROWS[Number(parts[1])];
     const tier = parts[2];
     if (!row || !row[tier]) return id;
-    return {
-      type:    "Family Plan",
-      name:    FAM_TIER_LABEL[tier] ?? tier,
-      hours:   `${row.hours} h/mo`,
-      price:   row[tier].discounted,
-      regular: row[tier].regular,
-    };
+    return { type: "Family Plan", name: FAM_TIER_LABEL[tier] ?? tier, hours: `${row.hours} h/mo`, price: row[tier].discounted, regular: row[tier].regular };
   }
   return id;
 }
@@ -124,9 +106,7 @@ function packageHtml(id) {
 
   return `
     <div style="display:inline-block;background:#fff8e6;border:1px solid #f0d890;border-radius:10px;padding:8px 14px;min-width:220px;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#8B6508;margin-bottom:4px;">
-        ${pkg.type}
-      </div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#8B6508;margin-bottom:4px;">${pkg.type}</div>
       <div style="font-size:16px;font-weight:800;color:#1C3A2E;margin-bottom:2px;">${pkg.name}</div>
       <div style="font-size:12px;color:#5a7060;">${pkg.hours}</div>
       <div style="margin-top:6px;display:flex;align-items:baseline;gap:6px;">
@@ -141,10 +121,6 @@ function packageHtml(id) {
 const DAY_LABEL = {
   mon: "Monday", tue: "Tuesday", wed: "Wednesday",
   thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday",
-};
-const TIME_LABEL = {
-  morning: "Morning 🌅", afternoon: "Afternoon ☀️",
-  evening: "Evening 🌙", weekend: "Weekend 🗓️", flexible: "Flexible 🔄",
 };
 
 function row(icon, label, value) {
@@ -173,11 +149,10 @@ function familyMembersHtml(members) {
   if (!members?.length) return "";
 
   const memberRows = members.map((m, i) => {
+    // Course pills
     const courseLabels = Array.isArray(m.courseLabels) && m.courseLabels.length
       ? m.courseLabels
       : resolveCourses(m.courses || []).split(" · ").filter(Boolean);
-
-    const tzDisplay = m.timezoneDisplay || m.timezone || "—";
 
     const coursePills = courseLabels.length
       ? courseLabels.map(c =>
@@ -185,21 +160,30 @@ function familyMembersHtml(members) {
         ).join("")
       : `<span style="color:#aaa;font-size:12px;">—</span>`;
 
+    const tzDisplay  = m.timezoneDisplay || m.timezone || "—";
+    // preferredDay comes as a key like "mon", "tue" etc.
+    const dayDisplay = DAY_LABEL[m.preferredDay] || m.preferredDay || "—";
+    // selectedTime is already a formatted string from the frontend
+    const timeDisplay = m.selectedTime || "—";
+
     return `
       <tr>
         <td colspan="2" style="padding:14px 16px;border-bottom:1px solid #e3ede6;background:${i % 2 === 0 ? "#f9fbf9" : "#ffffff"};">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td>
+                <!-- Member heading -->
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                   <div style="width:28px;height:28px;border-radius:50%;background:#1C3A2E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;text-align:center;line-height:28px;">
                     ${i + 1}
                   </div>
                   <span style="font-size:15px;font-weight:700;color:#0e2a1e;">${m.name || "—"}</span>
                 </div>
+
+                <!-- Member details grid -->
                 <table cellpadding="0" cellspacing="0" style="width:100%;font-size:12px;">
                   <tr>
-                    <td style="padding:3px 0;width:90px;color:#7a9485;font-weight:600;">📧 Email</td>
+                    <td style="padding:3px 0;width:110px;color:#7a9485;font-weight:600;">📧 Email</td>
                     <td style="padding:3px 0;">
                       <a href="mailto:${m.email}" style="color:#1C7A45;text-decoration:none;font-weight:600;">${m.email || "—"}</a>
                     </td>
@@ -207,6 +191,26 @@ function familyMembersHtml(members) {
                   <tr>
                     <td style="padding:3px 0;color:#7a9485;font-weight:600;">🕐 Timezone</td>
                     <td style="padding:3px 0;color:#1a2f45;">${tzDisplay}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:3px 0;color:#7a9485;font-weight:600;">📅 Day</td>
+                    <td style="padding:3px 0;color:#1a2f45;font-weight:600;">${dayDisplay}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:3px 0;color:#7a9485;font-weight:600;">⏰ Time</td>
+                    <td style="padding:3px 0;color:#1a2f45;">${timeDisplay}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:3px 0;color:#7a9485;font-weight:600;">🎂 Age</td>
+                    <td style="padding:3px 0;color:#1a2f45;">${m.studentAge || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:3px 0;color:#7a9485;font-weight:600;">🧑 Student</td>
+                    <td style="padding:3px 0;color:#1a2f45;">${m.studentGender || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:3px 0;color:#7a9485;font-weight:600;">👨‍🏫 Teacher</td>
+                    <td style="padding:3px 0;color:#1a2f45;">${m.teacherGender || "—"}</td>
                   </tr>
                   <tr>
                     <td style="padding:5px 0 3px;color:#7a9485;font-weight:600;vertical-align:top;">📖 Courses</td>
@@ -236,28 +240,37 @@ async function bookTrial(req, res) {
     selectedDay, selectedTime,
     studentAge, studentGender, teacherGender,
     message,
-    familyMembers,  // ← NEW
+    familyMembers,
   } = req.body;
 
   const isFamilyPkg = typeof selectedPkg === "string" && selectedPkg.startsWith("f:");
 
   // ── Validation ────────────────────────────────────────────────────
-  if (
-    !firstName || !lastName || !email || !whatsapp ||
-    !countryCode ||
-    (!isFamilyPkg && !timezone) ||
-    (!isFamilyPkg && !courses?.length) ||
-    (isFamilyPkg && (!Array.isArray(familyMembers) || familyMembers.length === 0)) ||
-    !selectedDay || !selectedTime ||
-    !studentAge || !studentGender || !teacherGender ||
-    !message
-  ) {
+  // Fields always required
+  const baseMissing =
+    !firstName || !lastName || !email || !whatsapp || !countryCode || !message;
+
+  // Fields required only for standard (non-family) packages
+  const standardMissing = !isFamilyPkg && (
+    !timezone ||
+    !courses?.length ||
+    !selectedDay ||
+    !selectedTime ||
+    !studentAge || !studentGender || !teacherGender
+  );
+
+  // Family packages need at least one complete member
+  const familyMissing = isFamilyPkg && (
+    !Array.isArray(familyMembers) || familyMembers.length === 0
+  );
+
+  if (baseMissing || standardMissing || familyMissing) {
     return res.status(400).json({ error: "Missing required fields." });
   }
 
   const coursesList = isFamilyPkg ? "" : resolveCourses(courses);
-  const day         = DAY_LABEL[selectedDay]   ?? selectedDay;
-  const time        = TIME_LABEL[selectedTime] ?? selectedTime;
+  const day         = DAY_LABEL[selectedDay] ?? selectedDay ?? "—";
+  const time        = selectedTime ?? "—";
   const waLink      = whatsappLink(whatsapp) || "#";
   const now         = new Date().toLocaleString("en-GB", {
     timeZone: "Africa/Cairo", dateStyle: "full", timeStyle: "short",
@@ -288,7 +301,7 @@ async function bookTrial(req, res) {
         <tr>
           <td colspan="2" style="background:#ffffff;padding:20px 28px 8px;">
             <div style="display:inline-block;background:#e8f5ec;border:1px solid #b8ddc4;border-radius:50px;padding:8px 20px;">
-              <span style="font-size:20px;">👤</span>
+              <span style="font-size:20px;">${isFamilyPkg ? "👪" : "👤"}</span>
               <span style="font-size:15px;font-weight:700;color:#1C3A2E;margin-left:8px;">${firstName} ${lastName}</span>
             </div>
           </td>
@@ -321,8 +334,11 @@ async function bookTrial(req, res) {
                   )}
                 `
               }
+
+              ${sectionHeader("Package")}
               ${row("📦", "Package", packageHtml(selectedPkg))}
 
+              ${!isFamilyPkg ? `
               ${sectionHeader("Schedule")}
               ${row("📅", "Preferred Day",  `<strong style="font-size:15px;">${day}</strong>`)}
               ${row("⏰", "Preferred Time", `<strong style="font-size:15px;">${time}</strong>`)}
@@ -331,6 +347,7 @@ async function bookTrial(req, res) {
               ${row("🎂", "Age",             studentAge)}
               ${row("🧑", "Student Gender",  studentGender)}
               ${row("👨‍🏫", "Teacher Gender", teacherGender)}
+              ` : ""}
 
               ${sectionHeader("Goals & Notes")}
               <tr>
@@ -392,13 +409,13 @@ async function bookTrial(req, res) {
           countryCode,
           timezone:      isFamilyPkg ? null : timezone,
           courses:       isFamilyPkg ? [] : (Array.isArray(courses) ? courses : [courses]),
-          familyMembers: isFamilyPkg ? familyMembers : [],   // ← NEW
+          familyMembers: isFamilyPkg ? familyMembers : [],
           selectedPkg,
-          selectedDay,
-          selectedTime,
-          studentAge,
-          studentGender,
-          teacherGender,
+          selectedDay:   isFamilyPkg ? null : selectedDay,
+          selectedTime:  isFamilyPkg ? null : selectedTime,
+          studentAge:    isFamilyPkg ? null : studentAge,
+          studentGender: isFamilyPkg ? null : studentGender,
+          teacherGender: isFamilyPkg ? null : teacherGender,
           message,
         });
       }
