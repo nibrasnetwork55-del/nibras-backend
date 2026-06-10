@@ -43,32 +43,264 @@ const COURSE_LABELS = {
   "islamic-tafsir":           "Tafsir (Quran Interpretation)",
 
   // ── Kids Programs ────────────────────────────────────────────────
-  "kids-by-age":              "Kids: By Age",
-  "kids-quran":               "Kids: Quran Learning",
-  "kids-arabic":              "Kids: Arabic Language",
-  "kids-islamic":             "Kids: Islamic Studies",
-  "kids-learning-goals":      "Kids: Learning Goals",
-  "kids-parent-zone":         "Kids: Parent Zone",
+  "kids-programs#by-age":              "Kids: By Age",
+  "kids-programs#quran":               "Kids: Quran Learning",
+  "kids-programs#arabic":              "Kids: Arabic Language",
+  "kids-programs#islamic":             "Kids: Islamic Studies",
+  "kids-programs#goals":               "Kids: Learning Goals",
+  "kids-programs#parent":              "Kids: Parent Zone",
 
   // ── Special Programs ─────────────────────────────────────────────
-  "new-muslims":              "New Muslims Track",
-  "family-packages":          "Family Packages (Save 20–30%)",
-  "special-needs":            "Special Needs Support",
-  "intensive-programs":       "Intensive Programs",
-  "exam-certification":       "Exam & Certification Preparation",
-  "parent-guided":            "Parent-Guided Programs",
-  "ijazah-pathway":           "Ijazah Pathway",
-  "teacher-certification":    "Teacher Certification",
-  "corporate-training":       "Corporate Training",
+  "new-muslims-track":              "New Muslims Track",
+  "family-packages":                "Family Packages (Save 20–30%)",
+  "special-needs-support":          "Special Needs Support",
+  "intensive-programs":             "Intensive Programs",
+  "exam-preparation":               "Exam & Certification Preparation",
+  "parent-guided-programs":         "Parent-Guided Programs",
+  "ijazah-pathway":                 "Ijazah Pathway",
+  "teacher-certification":          "Teacher Certification",
+  "corporate-training":             "Corporate Training",
 };
 
+// دالة مساعدة لتنصيص النص
+function escapeHtml(str) {
+  if (!str) return "";
+  return str.replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
+  });
+}
+
+// دالة محسنة لتحويل الكورسات مع أيقونات
 function resolveCourses(courses) {
   const list = Array.isArray(courses) ? courses : [courses];
   return list.map(href => {
-    // strip any leading path segments: "/courses/quran-recitation" → "quran-recitation"
     const key = href.replace(/^.*\//, "");
-    return COURSE_LABELS[key] || href;
-  }).join(" · ");
+    const label = COURSE_LABELS[key] || href;
+    
+    // إضافة أيقونة لكل نوع كورس
+    let icon = "📖";
+    if (key.includes("quran") || key.includes("tajweed") || key.includes("hifz") || key.includes("qiraat") || key.includes("tafsir")) {
+      icon = "📿";
+    } else if (key.includes("arabic") || key.includes("noor-al-bayan")) {
+      icon = "📝";
+    } else if (key.includes("kids")) {
+      icon = "👧";
+    } else if (key.includes("aqeedah") || key.includes("fiqh") || key.includes("hadith") || key.includes("seerah")) {
+      icon = "📚";
+    } else if (key.includes("new-muslims")) {
+      icon = "🕌";
+    } else if (key.includes("family")) {
+      icon = "👨‍👩‍👧‍👦";
+    } else if (key.includes("special-needs")) {
+      icon = "🤝";
+    } else if (key.includes("intensive")) {
+      icon = "⚡";
+    } else if (key.includes("exam")) {
+      icon = "📝";
+    } else if (key.includes("ijazah")) {
+      icon = "🎓";
+    } else if (key.includes("teacher")) {
+      icon = "👨‍🏫";
+    } else if (key.includes("corporate")) {
+      icon = "🏢";
+    }
+    
+    return { icon, label };
+  });
+}
+
+// دالة لعرض الكورسات بشكل Badges منظم ومتجاوب
+function renderCoursesBadges(courseItems) {
+  if (!courseItems || courseItems.length === 0) {
+    return `<span style="color:#aaa;font-size:12px;">—</span>`;
+  }
+  
+  let badgesHtml = `
+    <style>
+      .courses-container {
+        max-height: 280px;
+        overflow-y: auto;
+        padding: 8px;
+        background: #f9fbf9;
+        border-radius: 12px;
+        border: 1px solid #e3ede6;
+      }
+      .course-badge {
+        display: inline-flex;
+        align-items: center;
+        background: linear-gradient(135deg, #e8f5ec 0%, #d4e8da 100%);
+        border: 1px solid #b8ddc4;
+        border-radius: 40px;
+        padding: 6px 14px;
+        margin: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #1C3A2E;
+        transition: all 0.1s ease;
+        max-width: calc(100% - 20px);
+        word-break: break-word;
+        white-space: normal;
+        line-height: 1.4;
+      }
+      .badge-icon {
+        font-size: 14px;
+        margin-right: 6px;
+      }
+      .courses-header {
+        font-size: 11px;
+        color: #7a9485;
+        margin-bottom: 10px;
+        padding: 0 4px 8px 4px;
+        border-bottom: 1px solid #e3ede6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .courses-count {
+        background: #1C3A2E;
+        color: #fff;
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+    </style>
+    <div class="courses-container">
+      <div class="courses-header">
+        <span>📚 البرامج المختارة</span>
+        <span class="courses-count">${courseItems.length}</span>
+      </div>
+      <div>
+  `;
+  
+  courseItems.forEach(course => {
+    badgesHtml += `
+      <div class="course-badge">
+        <span class="badge-icon">${course.icon}</span>
+        <span>${escapeHtml(course.label)}</span>
+      </div>
+    `;
+  });
+  
+  badgesHtml += `
+      </div>
+    </div>
+  `;
+  
+  return badgesHtml;
+}
+
+// دالة لعرض الكورسات بشكل Grid منظم (بديل)
+function renderCoursesGrid(courseItems) {
+  if (!courseItems || courseItems.length === 0) {
+    return `<span style="color:#aaa;font-size:12px;">—</span>`;
+  }
+  
+  const itemsPerRow = 2;
+  let rows = [];
+  for (let i = 0; i < courseItems.length; i += itemsPerRow) {
+    rows.push(courseItems.slice(i, i + itemsPerRow));
+  }
+  
+  let gridHtml = `
+    <style>
+      .courses-grid-container {
+        background: #f9fbf9;
+        border-radius: 12px;
+        border: 1px solid #e3ede6;
+        padding: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .courses-grid-header {
+        font-size: 11px;
+        color: #7a9485;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e3ede6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .grid-count {
+        background: #1C3A2E;
+        color: #fff;
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .course-grid-card {
+        background: #ffffff;
+        border: 1px solid #d4e2d8;
+        border-radius: 10px;
+        padding: 8px 10px;
+        margin: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .grid-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+      .grid-name {
+        font-size: 12px;
+        font-weight: 600;
+        color: #1C3A2E;
+        line-height: 1.3;
+        word-break: break-word;
+      }
+      table.courses-grid-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      @media only screen and (max-width: 480px) {
+        .course-grid-card {
+          display: block;
+          margin: 8px 0;
+        }
+        .grid-icon {
+          display: inline-block;
+          margin-right: 6px;
+        }
+      }
+    </style>
+    <div class="courses-grid-container">
+      <div class="courses-grid-header">
+        <span>📚 البرامج المختارة</span>
+        <span class="grid-count">${courseItems.length}</span>
+      </div>
+      <table width="100%" cellpadding="0" cellspacing="0" class="courses-grid-table">
+  `;
+  
+  rows.forEach(row => {
+    gridHtml += `<tr>`;
+    row.forEach(course => {
+      gridHtml += `
+        <td width="50%" style="padding: 4px;">
+          <div class="course-grid-card">
+            <span class="grid-icon">${course.icon}</span>
+            <span class="grid-name">${escapeHtml(course.label)}</span>
+          </div>
+        </td>
+      `;
+    });
+    if (row.length < itemsPerRow) {
+      gridHtml += `<td width="50%" style="padding: 4px;"></td>`;
+    }
+    gridHtml += `</tr>`;
+  });
+  
+  gridHtml += `
+      </table>
+    </div>
+  `;
+  
+  return gridHtml;
 }
 
 /* ─── Package data ───────────────────────────────────────────────── */
@@ -174,15 +406,11 @@ function familyMembersHtml(members) {
   if (!members?.length) return "";
 
   const memberRows = members.map((m, i) => {
-    const courseLabels = Array.isArray(m.courseLabels) && m.courseLabels.length
-      ? m.courseLabels
-      : resolveCourses(m.courses || []).split(" · ").filter(Boolean);
-
-    const coursePills = courseLabels.length
-      ? courseLabels.map(c =>
-          `<span style="display:inline-block;background:#e8f5ec;color:#1C3A2E;border:1px solid #b8ddc4;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;margin:2px 2px 0 0;">${c}</span>`
-        ).join("")
-      : `<span style="color:#aaa;font-size:12px;">—</span>`;
+    const courseItems = (m.courseLabels && m.courseLabels.length)
+      ? m.courseLabels.map(label => ({ icon: "📖", label }))
+      : resolveCourses(m.courses || []);
+    
+    const coursesHtml = renderCoursesBadges(courseItems);
 
     const tzDisplay   = m.timezoneDisplay || m.timezone || "—";
     const dayDisplay  = DAY_LABEL[m.preferredDay] || m.preferredDay || "—";
@@ -194,7 +422,7 @@ function familyMembersHtml(members) {
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td>
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
                   <div style="width:28px;height:28px;border-radius:50%;background:#1C3A2E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;text-align:center;line-height:28px;">
                     ${i + 1}
                   </div>
@@ -205,7 +433,7 @@ function familyMembersHtml(members) {
                     <td style="padding:3px 0;width:110px;color:#7a9485;font-weight:600;">📧 Email</td>
                     <td style="padding:3px 0;">
                       <a href="mailto:${m.email}" style="color:#1C7A45;text-decoration:none;font-weight:600;">${m.email || "—"}</a>
-                    </td>
+                     </td>
                   </tr>
                   <tr>
                     <td style="padding:3px 0;color:#7a9485;font-weight:600;">🕐 Timezone</td>
@@ -234,7 +462,7 @@ function familyMembersHtml(members) {
                   <tr>
                     <td style="padding:5px 0 3px;color:#7a9485;font-weight:600;vertical-align:top;">📖 Courses</td>
                     <td style="padding:5px 0 3px;">
-                      <div style="display:flex;flex-wrap:wrap;">${coursePills}</div>
+                      ${coursesHtml}
                     </td>
                   </tr>
                 </table>
@@ -298,7 +526,13 @@ async function bookTrial(req, res) {
     return res.status(400).json({ error: "Missing required fields." });
   }
 
-  const coursesList = isFamilyPkg ? "" : resolveCourses(courses);
+  // تحضير عرض الكورسات المنظم
+  let coursesHtml = '<span style="color:#aaa;">—</span>';
+  if (!isFamilyPkg && courses && courses.length > 0) {
+    const courseItems = resolveCourses(courses);
+    coursesHtml = renderCoursesBadges(courseItems); // يمكن تغييرها إلى renderCoursesGrid حسب الرغبة
+  }
+
   const day         = DAY_LABEL[selectedDay] ?? selectedDay ?? "—";
   const time        = selectedTime ?? "—";
   const waLink      = whatsappLink(whatsapp) || "#";
@@ -351,19 +585,14 @@ async function bookTrial(req, res) {
                 : row("🕐", "Timezone", timezone)
               }
 
-              ${isFamilyPkg
-                ? familyMembersHtml(familyMembers)
-                : `
-                  ${sectionHeader("Courses & Package")}
-                  ${row("📖", "Courses",
-                    `<div style="display:flex;flex-wrap:wrap;gap:6px;">
-                      ${coursesList.split(" · ").map(c =>
-                        `<span style="background:#e8f5ec;color:#1C3A2E;border:1px solid #b8ddc4;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${c}</span>`
-                      ).join("")}
-                    </div>`
-                  )}
-                `
-              }
+              ${!isFamilyPkg ? `
+                ${sectionHeader("Programs & Courses")}
+                <tr>
+                  <td colspan="2" style="padding:16px;background:#ffffff;">
+                    ${coursesHtml}
+                  </td>
+                </tr>
+              ` : ""}
 
               ${sectionHeader("Package")}
               ${row("📦", "Package", packageHtml(selectedPkg))}
@@ -379,11 +608,13 @@ async function bookTrial(req, res) {
               ${row("👨‍🏫", "Teacher Gender", teacherGender)}
               ` : ""}
 
+              ${isFamilyPkg ? familyMembersHtml(familyMembers) : ""}
+
               ${sectionHeader("Goals & Notes")}
               <tr>
                 <td colspan="2" style="padding:14px 16px;background:#f9fbf9;font-size:14px;color:#1a2f45;line-height:1.6;font-style:italic;">
                   "${message}"
-                </td>
+                 </td>
               </tr>
 
             </table>
@@ -396,11 +627,11 @@ async function bookTrial(req, res) {
             <p style="margin:0;font-size:12px;color:#7a9485;">
               Auto-generated by <strong style="color:#1C3A2E;">Nibras Network</strong> booking system.
             </p>
-          </td>
+           </td>
         </tr>
 
       </table>
-    </td></tr>
+    </td>
   </table>
 </body>
 </html>`;
