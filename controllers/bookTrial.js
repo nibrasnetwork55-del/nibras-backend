@@ -17,33 +17,58 @@ const transporter = nodemailer.createTransport({
 
 /* ─── Course href → readable label ──────────────────────────────── */
 const COURSE_LABELS = {
-  // Quran
-  "/quran/noorani-qaida":       "Noorani Qaida (Foundation)",
-  "/quran/recitation":          "Quran Recitation (Tilawah)",
-  "/quran/memorization":        "Quran Memorization (Hifz)",
-  "/quran/tajweed":             "Tajweed (Perfect Recitation)",
-  "/quran/qiraat":              "Qira'at (Variant Recitations)",
-  "/quran/tafsir":              "Tafsir (Quran Explanation)",
-  "/quran/translation":         "Quran with Translation",
-  // Arabic
-  "/arabic/noor-al-bayan":      "Noor Al-Bayan (Arabic Foundation)",
-  "/arabic/beginner":           "Arabic for Beginners",
-  "/arabic/quranic":            "Quranic Arabic",
-  "/arabic/conversational":     "Conversational Arabic",
-  "/arabic/classical":          "Classical Arabic",
-  "/arabic/msa":                "Modern Standard Arabic (MSA)",
-  // Islamic Studies
-  "/islamic/general":           "Islamic General (Comprehensive)",
-  "/islamic/aqeedah":           "Aqeedah (Islamic Creed)",
-  "/islamic/fiqh":              "Fiqh (Islamic Jurisprudence)",
-  "/islamic/hadith":            "Hadith Studies",
-  "/islamic/seerah":            "Seerah (Prophet's Biography)",
-  "/islamic/tafsir":            "Tafsir (Quran Interpretation)",
+  // ── Quran Programs ──────────────────────────────────────────────
+  "noorani-qaida":            "Noorani Qaida (Foundation)",
+  "quran-recitation":         "Quran Recitation (Tilawah)",
+  "quran-memorization":       "Quran Memorization (Hifz)",
+  "tajweed":                  "Tajweed (Perfect Recitation)",
+  "qiraat":                   "Qira'at (Variant Recitations)",
+  "quran-tafsir":             "Tafsir (Quran Explanation)",
+  "quran-translation":        "Quran with Translation",
+
+  // ── Arabic Language ─────────────────────────────────────────────
+  "noor-al-bayan":            "Noor Al-Bayan (Arabic Foundation)",
+  "arabic-beginners":         "Arabic for Beginners",
+  "quranic-arabic":           "Quranic Arabic",
+  "conversational-arabic":    "Conversational Arabic",
+  "classical-arabic":         "Classical Arabic",
+  "modern-standard-arabic":   "Modern Standard Arabic (MSA)",
+
+  // ── Islamic Studies ─────────────────────────────────────────────
+  "islamic-general":          "Islamic General (Comprehensive)",
+  "aqeedah":                  "Aqeedah (Islamic Creed)",
+  "fiqh":                     "Fiqh (Islamic Jurisprudence)",
+  "hadith":                   "Hadith Studies",
+  "seerah":                   "Seerah (Prophet's Biography)",
+  "islamic-tafsir":           "Tafsir (Quran Interpretation)",
+
+  // ── Kids Programs ────────────────────────────────────────────────
+  "kids-by-age":              "Kids: By Age",
+  "kids-quran":               "Kids: Quran Learning",
+  "kids-arabic":              "Kids: Arabic Language",
+  "kids-islamic":             "Kids: Islamic Studies",
+  "kids-learning-goals":      "Kids: Learning Goals",
+  "kids-parent-zone":         "Kids: Parent Zone",
+
+  // ── Special Programs ─────────────────────────────────────────────
+  "new-muslims":              "New Muslims Track",
+  "family-packages":          "Family Packages (Save 20–30%)",
+  "special-needs":            "Special Needs Support",
+  "intensive-programs":       "Intensive Programs",
+  "exam-certification":       "Exam & Certification Preparation",
+  "parent-guided":            "Parent-Guided Programs",
+  "ijazah-pathway":           "Ijazah Pathway",
+  "teacher-certification":    "Teacher Certification",
+  "corporate-training":       "Corporate Training",
 };
 
 function resolveCourses(courses) {
   const list = Array.isArray(courses) ? courses : [courses];
-  return list.map(href => COURSE_LABELS[href] || href).join(" · ");
+  return list.map(href => {
+    // strip any leading path segments: "/courses/quran-recitation" → "quran-recitation"
+    const key = href.replace(/^.*\//, "");
+    return COURSE_LABELS[key] || href;
+  }).join(" · ");
 }
 
 /* ─── Package data ───────────────────────────────────────────────── */
@@ -149,7 +174,6 @@ function familyMembersHtml(members) {
   if (!members?.length) return "";
 
   const memberRows = members.map((m, i) => {
-    // Course pills
     const courseLabels = Array.isArray(m.courseLabels) && m.courseLabels.length
       ? m.courseLabels
       : resolveCourses(m.courses || []).split(" · ").filter(Boolean);
@@ -160,10 +184,8 @@ function familyMembersHtml(members) {
         ).join("")
       : `<span style="color:#aaa;font-size:12px;">—</span>`;
 
-    const tzDisplay  = m.timezoneDisplay || m.timezone || "—";
-    // preferredDay comes as a key like "mon", "tue" etc.
-    const dayDisplay = DAY_LABEL[m.preferredDay] || m.preferredDay || "—";
-    // selectedTime is already a formatted string from the frontend
+    const tzDisplay   = m.timezoneDisplay || m.timezone || "—";
+    const dayDisplay  = DAY_LABEL[m.preferredDay] || m.preferredDay || "—";
     const timeDisplay = m.selectedTime || "—";
 
     return `
@@ -172,15 +194,12 @@ function familyMembersHtml(members) {
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td>
-                <!-- Member heading -->
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                   <div style="width:28px;height:28px;border-radius:50%;background:#1C3A2E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;text-align:center;line-height:28px;">
                     ${i + 1}
                   </div>
                   <span style="font-size:15px;font-weight:700;color:#0e2a1e;">${m.name || "—"}</span>
                 </div>
-
-                <!-- Member details grid -->
                 <table cellpadding="0" cellspacing="0" style="width:100%;font-size:12px;">
                   <tr>
                     <td style="padding:3px 0;width:110px;color:#7a9485;font-weight:600;">📧 Email</td>
@@ -245,12 +264,24 @@ async function bookTrial(req, res) {
 
   const isFamilyPkg = typeof selectedPkg === "string" && selectedPkg.startsWith("f:");
 
-  // ── Validation ────────────────────────────────────────────────────
-  // Fields always required
+  // ── Email validation ──────────────────────────────────────────────
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (email && !emailRegex.test(email)) {
+    return res.status(400).json({ error: "Invalid email address." });
+  }
+
+  // ── WhatsApp validation (digits only, 7–15 chars) ─────────────────
+  if (whatsapp) {
+    const cleanWa = whatsapp.replace(/[\s\-()+]/g, "");
+    if (!/^\d{7,15}$/.test(cleanWa)) {
+      return res.status(400).json({ error: "Invalid WhatsApp number. Please enter digits only (7–15 digits)." });
+    }
+  }
+
+  // ── Required fields validation ────────────────────────────────────
   const baseMissing =
     !firstName || !lastName || !email || !whatsapp || !countryCode || !message;
 
-  // Fields required only for standard (non-family) packages
   const standardMissing = !isFamilyPkg && (
     !timezone ||
     !courses?.length ||
@@ -259,7 +290,6 @@ async function bookTrial(req, res) {
     !studentAge || !studentGender || !teacherGender
   );
 
-  // Family packages need at least one complete member
   const familyMissing = isFamilyPkg && (
     !Array.isArray(familyMembers) || familyMembers.length === 0
   );
